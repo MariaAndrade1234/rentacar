@@ -1,16 +1,19 @@
-from django.urls import path, include
-from rest_framework.routers import DefaultRouter
+from django.urls import path
 from .views import (
     RentalViewSet, RentalPaymentViewSet,
     RentalReviewViewSet, RentalDocumentViewSet
 )
 
-router = DefaultRouter()
-router.register(r'payments', RentalPaymentViewSet, basename='rental-payment')
-router.register(r'reviews', RentalReviewViewSet, basename='rental-review')
-router.register(r'documents', RentalDocumentViewSet, basename='rental-document')
-router.register(r'', RentalViewSet, basename='rental')
-
 urlpatterns = [
-    path('', include(router.urls)),
+    path('payments/', RentalPaymentViewSet.as_view({'get': 'list', 'post': 'create'}), name='rental-payment-list'),
+    path('payments/<int:pk>/', RentalPaymentViewSet.as_view({'get': 'retrieve', 'put': 'update', 'patch': 'partial_update', 'delete': 'destroy'}), name='rental-payment-detail'),
+    
+    path('reviews/', RentalReviewViewSet.as_view({'get': 'list', 'post': 'create'}), name='rental-review-list'),
+    path('reviews/<int:pk>/', RentalReviewViewSet.as_view({'get': 'retrieve', 'put': 'update', 'patch': 'partial_update', 'delete': 'destroy'}), name='rental-review-detail'),
+    
+    path('documents/', RentalDocumentViewSet.as_view({'get': 'list', 'post': 'create'}), name='rental-document-list'),
+    path('documents/<int:pk>/', RentalDocumentViewSet.as_view({'get': 'retrieve', 'put': 'update', 'patch': 'partial_update', 'delete': 'destroy'}), name='rental-document-detail'),
+    
+    path('', RentalViewSet.as_view({'get': 'list', 'post': 'create'}), name='rental-list'),
+    path('<int:pk>/', RentalViewSet.as_view({'get': 'retrieve', 'put': 'update', 'patch': 'partial_update', 'delete': 'destroy'}), name='rental-detail'),
 ]

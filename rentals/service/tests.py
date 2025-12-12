@@ -14,17 +14,16 @@ from rentals.service import RentalService
 
 
 class RentalServiceTests(TestCase):
-    """Testes para o RentalService"""
+    """Tests for RentalService"""
     
     def setUp(self):
-        """Configuração inicial para os testes"""
+        """Initial setup for tests"""
         self.user = User.objects.create_user(
             username='testuser',
             email='test@example.com',
             password='testpass123'
         )
         
-        # Criar carro para testes
         brand = CarBrand.objects.create(name="Toyota", country="Japan")
         car_model = CarModel.objects.create(brand=brand, name="Corolla", year=2023)
         self.car = Car.objects.create(
@@ -42,7 +41,7 @@ class RentalServiceTests(TestCase):
         )
     
     def test_create_rental_success(self):
-        """Testar criação bem-sucedida de rental"""
+        """Test successful rental creation"""
         start_date = timezone.now() + timedelta(days=1)
         end_date = start_date + timedelta(days=3)
         
@@ -61,7 +60,7 @@ class RentalServiceTests(TestCase):
         self.assertIn('breakdown', result)
     
     def test_create_rental_invalid_dates(self):
-        """Testar criação com datas inválidas"""
+        """Test creation with invalid dates"""
         start_date = timezone.now() + timedelta(days=3)
         end_date = start_date - timedelta(days=1)
         
@@ -78,7 +77,7 @@ class RentalServiceTests(TestCase):
         self.assertIn('error', result)
     
     def test_create_rental_past_date(self):
-        """Testar criação com data no passado"""
+        """Test creation with past date"""
         start_date = timezone.now() - timedelta(days=1)
         end_date = start_date + timedelta(days=2)
         
@@ -94,7 +93,7 @@ class RentalServiceTests(TestCase):
         self.assertFalse(result['success'])
     
     def test_check_availability_available(self):
-        """Testar verificação de disponibilidade - carro disponível"""
+        """Test availability check - car available"""
         start_date = timezone.now() + timedelta(days=1)
         end_date = start_date + timedelta(days=2)
         
@@ -107,7 +106,7 @@ class RentalServiceTests(TestCase):
         self.assertTrue(available)
     
     def test_check_availability_not_available(self):
-        """Testar verificação de disponibilidade - carro indisponível"""
+        """Test availability check - car unavailable"""
         self.car.mark_as_rented()
         
         start_date = timezone.now() + timedelta(days=1)
@@ -122,8 +121,7 @@ class RentalServiceTests(TestCase):
         self.assertFalse(available)
     
     def test_check_availability_conflicting_rental(self):
-        """Testar verificação com rental conflitante"""
-        # Criar rental existente
+        """Test availability check with conflicting rental"""
         start_date1 = timezone.now() + timedelta(days=1)
         end_date1 = start_date1 + timedelta(days=3)
         
@@ -140,7 +138,6 @@ class RentalServiceTests(TestCase):
         rental1.calculate_total_amount()
         rental1.save()
         
-        # Tentar criar novo rental com conflito
         start_date2 = start_date1 + timedelta(days=1)
         end_date2 = start_date2 + timedelta(days=2)
         
@@ -153,7 +150,7 @@ class RentalServiceTests(TestCase):
         self.assertFalse(available)
     
     def test_calculate_total_price(self):
-        """Testar cálculo de preço total"""
+        """Test total price calculation"""
         start_date = timezone.now() + timedelta(days=1)
         end_date = start_date + timedelta(days=3)
         
@@ -171,7 +168,7 @@ class RentalServiceTests(TestCase):
         self.assertEqual(price_info['duration_days'], 3)
     
     def test_calculate_total_price_with_insurance(self):
-        """Testar cálculo de preço com seguro"""
+        """Test price calculation with insurance"""
         start_date = timezone.now() + timedelta(days=1)
         end_date = start_date + timedelta(days=3)
         
@@ -186,7 +183,7 @@ class RentalServiceTests(TestCase):
         self.assertGreater(Decimal(price_info['insurance']), Decimal('0'))
     
     def test_cancel_rental_with_refund(self):
-        """Testar cancelamento com reembolso"""
+        """Test cancellation with refund"""
         start_date = timezone.now() + timedelta(days=10)
         end_date = start_date + timedelta(days=3)
         
@@ -205,7 +202,7 @@ class RentalServiceTests(TestCase):
         
         result = RentalService.cancel_rental(
             rental_id=rental.id,
-            reason="Mudança de planos"
+            reason="Change of plans"
         )
         
         self.assertTrue(result['success'])
@@ -213,7 +210,7 @@ class RentalServiceTests(TestCase):
         self.assertGreater(Decimal(result['refund_amount']), Decimal('0'))
     
     def test_cancel_rental_no_refund(self):
-        """Testar cancelamento sem reembolso (dia do início)"""
+        """Test cancellation without refund (start day)"""
         start_date = timezone.now() + timedelta(hours=2)
         end_date = start_date + timedelta(days=3)
         
@@ -236,7 +233,7 @@ class RentalServiceTests(TestCase):
         self.assertEqual(Decimal(result['refund_amount']), Decimal('0'))
     
     def test_update_rental_status_valid_transition(self):
-        """Testar atualização válida de status"""
+        """Test valid status update"""
         rental = Rental(
             user=self.user,
             car=self.car,
@@ -259,7 +256,7 @@ class RentalServiceTests(TestCase):
         self.assertEqual(result['new_status'], "CONFIRMED")
     
     def test_update_rental_status_invalid_transition(self):
-        """Testar atualização inválida de status"""
+        """Test invalid status update"""
         rental = Rental(
             user=self.user,
             car=self.car,
@@ -281,7 +278,7 @@ class RentalServiceTests(TestCase):
         self.assertFalse(result['success'])
     
     def test_get_customer_rentals(self):
-        """Testar obtenção de rentals do cliente"""
+        """Test retrieving customer rentals"""
         rental = Rental(
             user=self.user,
             car=self.car,
@@ -300,7 +297,7 @@ class RentalServiceTests(TestCase):
         self.assertEqual(rentals[0]['id'], rental.id)
     
     def test_get_car_rental_history(self):
-        """Testar obtenção do histórico do carro"""
+        """Test retrieving car rental history"""
         rental = Rental(
             user=self.user,
             car=self.car,
@@ -320,7 +317,7 @@ class RentalServiceTests(TestCase):
         self.assertEqual(history[0]['id'], rental.id)
     
     def test_calculate_late_fees(self):
-        """Testar cálculo de multa por atraso"""
+        """Test late fee calculation"""
         start_date = timezone.now() - timedelta(days=5)
         end_date = timezone.now() - timedelta(days=2)
         
@@ -343,7 +340,7 @@ class RentalServiceTests(TestCase):
         self.assertGreater(fees['late_days'], 0)
     
     def test_get_rental_summary(self):
-        """Testar obtenção do resumo do rental"""
+        """Test retrieving rental summary"""
         rental = Rental(
             user=self.user,
             car=self.car,
@@ -365,3 +362,4 @@ class RentalServiceTests(TestCase):
         self.assertIn('car', summary)
         self.assertIn('pricing', summary)
         self.assertIn('mileage', summary)
+

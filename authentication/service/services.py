@@ -1,3 +1,4 @@
+import logging
 from django.contrib.auth import authenticate
 from django.contrib.auth.models import User
 from django.core.exceptions import ValidationError
@@ -8,14 +9,24 @@ from ..validations.validation import (
     validate_registration_data,
     validate_password_change
 )
+from core.exceptions import (
+    AuthenticationException,
+    InvalidTokenException,
+    ResourceNotFoundException
+)
+
+logger = logging.getLogger(__name__)
 
 
 class AuthService:
 
     @staticmethod
     def login_user(username: str, password: str, ip_address=None, device_info=None, user_agent=None):
+        logger.info(f"Login attempt for username: {username}")
+        
         validation = validate_login_data({'username': username, 'password': password})
         if not validation['valid']:
+            logger.warning(f"Login validation failed for {username}: {validation['errors']}")
             LoginHistory.objects.create(
                 user=User.objects.filter(username=username).first(),
                 ip_address=ip_address,
@@ -29,6 +40,7 @@ class AuthService:
         user = authenticate(username=username, password=password)
         
         if user is None:
+            logger.warning(f"Authentication failed for {username}")
             user_obj = User.objects.filter(username=username).first()
             if user_obj:
                 LoginHistory.objects.create(
@@ -42,6 +54,7 @@ class AuthService:
             return None
 
         if not user.is_active:
+            logger.warning(f"Inactive account login attempt for {username}")
             LoginHistory.objects.create(
                 user=user,
                 ip_address=ip_address,
@@ -64,6 +77,15 @@ class AuthService:
             device_info=device_info,
             user_agent=user_agent,
             success=True
+        )
+        
+        logger.info(
+            f"Login successful",
+            extra={
+                'user_id': user.id,
+                'username': username,
+                'ip_address': ip_address
+            }
         )
 
         return {

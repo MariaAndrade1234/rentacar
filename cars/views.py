@@ -1,14 +1,20 @@
+import logging
 from rest_framework import viewsets, filters, status
 from rest_framework.decorators import action
 from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticated, IsAdminUser, AllowAny
 from django_filters.rest_framework import DjangoFilterBackend
+from django.core.cache import cache
+from django.utils.decorators import method_decorator
+from django.views.decorators.cache import cache_page
 from .models import CarBrand, CarModel, Car, CarDocument, CarImage
 from .serializers import (
     CarBrandSerializer, CarModelSerializer, CarListSerializer, 
     CarDetailSerializer, CarCreateUpdateSerializer,
     CarDocumentSerializer, CarImageSerializer
 )
+
+logger = logging.getLogger(__name__)
 
 
 class CarBrandViewSet(viewsets.ModelViewSet):
@@ -41,12 +47,30 @@ class CarModelViewSet(viewsets.ModelViewSet):
 
 
 class CarViewSet(viewsets.ModelViewSet):
-    queryset = Car.objects.select_related('model__brand').prefetch_related('images', 'documents').all()
+    # Optimized with select_related and prefetch_related
+    queryset = Car.objects.select_related(
+        'model',
+        'model__brand'
+    ).prefetch_related(
+        'images',
+        'documents'
+    ).all()
     filter_backends = [DjangoFilterBackend, filters.SearchFilter, filters.OrderingFilter]
     filterset_fields = ['status', 'is_available', 'model__brand', 'model', 'color', 'fuel_type', 'transmission']
     search_fields = ['license_plate', 'vin', 'model__name', 'model__brand__name']
     ordering_fields = ['daily_price', 'mileage']
     ordering = ['model__brand__name', 'model__name']
+    
+    def get_permissions(self):
+        if self.action in ['list', 'retrieve']:
+            return [AllowAny()]
+        return [IsAdminUser()]
+    
+    @method_decorator(cache_page(60 * 15))  # Cache for 15 minutes
+    def list(self, request, *args, **kwargs):
+        """List all cars with caching for public endpoint."""
+        logger.debug("Listing cars (cached)")
+        return super().list(request, *args, **kwargs)
     
     def get_serializer_class(self):
         if self.action == 'list':

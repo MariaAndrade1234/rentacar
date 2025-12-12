@@ -76,7 +76,6 @@ class AccountService:
         except User.DoesNotExist:
             raise ValidationError(f"User with ID {user_id} not found")
         
-        # Check for active rentals
         active_rentals = Rental.objects.filter(
             user=user,
             status__in=['PENDING', 'CONFIRMED', 'ACTIVE']
@@ -219,7 +218,6 @@ class AccountService:
             is_eligible = False
             reasons.append(f"Has {overdue_rentals.count()} overdue rental(s)")
         
-        # Check for unpaid rentals
         unpaid_rentals = Rental.objects.filter(
             user=user,
             status__in=['CONFIRMED', 'ACTIVE', 'COMPLETED']

@@ -1,24 +1,13 @@
-"""
-Validation functions for accounts app.
-"""
-
 import re
 from typing import Dict, Any
 
 
 def validate_email(email: str) -> bool:
-    """
-    Validate email format.
-    """
     email_pattern = r'^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$'
     return bool(re.match(email_pattern, email))
 
 
 def validate_username(username: str) -> bool:
-    """
-    Validate username format.
-    Username must be 3-30 characters, alphanumeric and underscores only.
-    """
     if not username or len(username) < 3 or len(username) > 30:
         return False
     username_pattern = r'^[a-zA-Z0-9_]+$'
@@ -26,10 +15,6 @@ def validate_username(username: str) -> bool:
 
 
 def validate_password(password: str) -> Dict[str, Any]:
-    """
-    Validate password strength.
-    Returns a dict with 'valid' boolean and 'errors' list.
-    """
     errors = []
     
     if len(password) < 8:
@@ -51,10 +36,6 @@ def validate_password(password: str) -> Dict[str, Any]:
 
 
 def validate_account_data(data: Dict[str, Any]) -> Dict[str, Any]:
-    """
-    Validate complete account data.
-    Returns a dict with 'valid' boolean and 'errors' dict.
-    """
     errors = {}
     
     if 'email' in data and not validate_email(data['email']):

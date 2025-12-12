@@ -24,25 +24,25 @@ class RentalAdmin(admin.ModelAdmin):
     readonly_fields = ['created_at', 'updated_at']
     
     fieldsets = (
-        ('Informações do Cliente', {
+        ('Customer Information', {
             'fields': ('user',)
         }),
-        ('Informações do Veículo', {
+        ('Vehicle Information', {
             'fields': ('car',)
         }),
-        ('Datas & Local', {
+        ('Dates & Location', {
             'fields': ('start_date', 'end_date', 'actual_return_date', 'pickup_location', 'dropoff_location')
         }),
         ('Status', {
             'fields': ('status',)
         }),
-        ('Valores', {
+        ('Amounts', {
             'fields': ('daily_rate', 'total_days', 'subtotal', 'discount', 'tax', 'total_amount')
         }),
-        ('Quilometragem', {
+        ('Mileage', {
             'fields': ('mileage_start', 'mileage_end')
         }),
-        ('Observações', {
+        ('Notes', {
             'fields': ('notes', 'cancellation_reason')
         }),
         ('Timestamps', {

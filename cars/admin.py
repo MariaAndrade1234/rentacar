@@ -38,19 +38,19 @@ class CarAdmin(admin.ModelAdmin):
     readonly_fields = ['created_at', 'updated_at']
     
     fieldsets = (
-        ('Informações Básicas', {
+        ('Basic Information', {
             'fields': ('model', 'license_plate', 'vin', 'color', 'status')
         }),
-        ('Especificações', {
+        ('Specifications', {
             'fields': ('mileage', 'fuel_type', 'transmission', 'seats', 'doors', 'trunk_capacity')
         }),
-        ('Recursos', {
+        ('Features', {
             'fields': ('has_gps', 'has_air_conditioning', 'has_power_steering', 'has_abs', 'has_airbag')
         }),
-        ('Preço & Disponibilidade', {
+        ('Price & Availability', {
             'fields': ('daily_price', 'is_available')
         }),
-        ('Mídia & Descrição', {
+        ('Media & Description', {
             'fields': ('image_url', 'description')
         }),
         ('Timestamps', {

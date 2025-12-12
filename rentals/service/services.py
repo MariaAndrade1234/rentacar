@@ -1,12 +1,22 @@
+import logging
 from decimal import Decimal
 from datetime import datetime, timedelta
 from typing import Dict, Any, List, Optional
 from django.utils import timezone
 from django.db.models import Q
 from django.core.exceptions import ValidationError
+from django.core.cache import cache
 
 from rentals.models import Rental, RentalPayment, RentalReview, RentalDocument
 from cars.models import Car
+from core.exceptions import (
+    InvalidRentalPeriodException,
+    CarNotAvailableException,
+    RentalConflictException,
+    ResourceNotFoundException
+)
+
+logger = logging.getLogger(__name__)
 
 
 class RentalService:
@@ -28,22 +38,33 @@ class RentalService:
         discount: Decimal = Decimal('0.00'),
         add_insurance: bool = False
     ) -> Dict[str, Any]:
+        logger.info(f"Creating rental for user {user_id}, car {car_id}")
+        
         try:
             if start_date >= end_date:
-                raise ValidationError("Data de término deve ser posterior à de início.")
+                logger.warning(f"Invalid rental period: start_date >= end_date")
+                raise InvalidRentalPeriodException("End date must be after start date")
             
             if start_date < timezone.now():
-                raise ValidationError("Data de início não pode ser no passado.")
+                logger.warning(f"Invalid rental period: start date in the past")
+                raise InvalidRentalPeriodException("Start date cannot be in the past")
             
             duration = (end_date - start_date).days
             if duration < RentalService.MINIMUM_RENTAL_DAYS:
-                raise ValidationError(f"Duração mínima: {RentalService.MINIMUM_RENTAL_DAYS} dia(s)")
+                logger.warning(f"Rental duration too short: {duration} days")
+                raise InvalidRentalPeriodException(
+                    f"Minimum rental duration: {RentalService.MINIMUM_RENTAL_DAYS} day(s)"
+                )
             
             if duration > RentalService.MAXIMUM_RENTAL_DAYS:
-                raise ValidationError(f"Duração máxima: {RentalService.MAXIMUM_RENTAL_DAYS} dias")
+                logger.warning(f"Rental duration too long: {duration} days")
+                raise InvalidRentalPeriodException(
+                    f"Maximum rental duration: {RentalService.MAXIMUM_RENTAL_DAYS} days"
+                )
             
             if not RentalService.check_availability(car_id, start_date, end_date):
-                raise ValidationError("Carro não disponível para o período selecionado.")
+                logger.warning(f"Car {car_id} not available for selected period")
+                raise CarNotAvailableException("Car not available for the selected period")
             
             car = Car.objects.get(id=car_id)
             
@@ -73,6 +94,20 @@ class RentalService:
             rental.calculate_total_amount()
             rental.save()
             
+            logger.info(
+                f"Rental created successfully",
+                extra={
+                    'rental_id': rental.id,
+                    'user_id': user_id,
+                    'car_id': car_id,
+                    'total_amount': float(rental.total_amount)
+                }
+            )
+            
+            # Trigger async email notification
+            from rentals.tasks import send_rental_confirmation_email
+            send_rental_confirmation_email.delay(rental.id)
+            
             return {
                 'success': True,
                 'rental_id': rental.id,
@@ -81,11 +116,14 @@ class RentalService:
             }
         
         except Car.DoesNotExist:
-            return {'success': False, 'error': 'Carro não encontrado'}
-        except ValidationError as e:
+            logger.error(f"Car {car_id} not found")
+            raise ResourceNotFoundException(f"Car with id {car_id} not found")
+        except (InvalidRentalPeriodException, CarNotAvailableException) as e:
+            logger.warning(f"Rental creation failed: {str(e)}")
             return {'success': False, 'error': str(e)}
         except Exception as e:
-            return {'success': False, 'error': f'Erro ao criar rental: {str(e)}'}
+            logger.error(f"Unexpected error creating rental: {str(e)}", exc_info=True)
+            return {'success': False, 'error': f'Error creating rental: {str(e)}'}
 
     @staticmethod
     def check_availability(car_id: int, start_date: datetime, end_date: datetime) -> bool:

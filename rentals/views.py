@@ -1,18 +1,34 @@
+import logging
 from rest_framework import viewsets, filters, status
 from rest_framework.decorators import action
 from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticated, IsAdminUser
 from django_filters.rest_framework import DjangoFilterBackend
 from django.utils import timezone
+from django.core.cache import cache
+from django.utils.decorators import method_decorator
+from django.views.decorators.cache import cache_page
 from .models import Rental, RentalPayment, RentalReview, RentalDocument
 from .serializers import (
     RentalListSerializer, RentalDetailSerializer, RentalCreateSerializer,
     RentalPaymentSerializer, RentalReviewSerializer, RentalDocumentSerializer
 )
 
+logger = logging.getLogger(__name__)
+
 
 class RentalViewSet(viewsets.ModelViewSet):
-    queryset = Rental.objects.select_related('user', 'car__model__brand').prefetch_related('payments', 'documents').all()
+    # Optimized queryset with select_related and prefetch_related
+    queryset = Rental.objects.select_related(
+        'user',
+        'car',
+        'car__model',
+        'car__model__brand'
+    ).prefetch_related(
+        'payments',
+        'documents',
+        'review'
+    ).all()
     filter_backends = [DjangoFilterBackend, filters.SearchFilter, filters.OrderingFilter]
     filterset_fields = ['status', 'user', 'car']
     search_fields = ['user__username', 'car__license_plate', 'pickup_location', 'dropoff_location']
@@ -28,9 +44,24 @@ class RentalViewSet(viewsets.ModelViewSet):
         return RentalDetailSerializer
     
     def get_queryset(self):
+        """Get queryset with caching for non-admin users."""
         if self.request.user.is_staff:
+            logger.debug("Admin user accessing all rentals")
             return self.queryset
-        return self.queryset.filter(user=self.request.user)
+        
+        # Cache user's rentals for 5 minutes
+        cache_key = f'user_rentals_{self.request.user.id}'
+        cached_rentals = cache.get(cache_key)
+        
+        if cached_rentals is not None:
+            logger.debug(f"Cache hit for user {self.request.user.id} rentals")
+            return cached_rentals
+        
+        user_rentals = self.queryset.filter(user=self.request.user)
+        cache.set(cache_key, user_rentals, 300)  # 5 minutes
+        logger.debug(f"Cache miss for user {self.request.user.id} rentals")
+        
+        return user_rentals
     
     @action(detail=True, methods=['post'])
     def confirm(self, request, pk=None):

@@ -1,189 +1,396 @@
 # RentACar API
 
-Sistema completo de aluguel de carros desenvolvido com Django REST Framework, seguindo padrões do projeto Alexandria.
+## Implemented Features
 
-## Recursos Implementados
+### Authentication (`/api/auth/`)
+-  User registration with validation
+-  Login/Logout
+-  Custom tokens (access + refresh)
+-  Password change
+-  Password recovery via token
+-  Login history tracking
+-  Device and IP tracking
+-  Custom authentication middleware
 
-### Autenticação (`/api/auth/`)
-- ✅ Registro de usuários com validação
-- ✅ Login/Logout
-- ✅ Tokens customizados (access + refresh)
-- ✅ Alteração de senha
-- ✅ Recuperação de senha via token
-- ✅ Histórico de login com rastreamento
-- ✅ Rastreamento de dispositivos e IPs
-- ✅ Middleware de autenticação customizado
+### Accounts (`/api/accounts/`)
+-  User profile management
+-  Custom validations (email, username, password)
+-  Complete REST serializers
+-  Service layer
 
-### Contas (`/api/accounts/`)
-- ✅ Gerenciamento de perfis de usuário
-- ✅ Validações customizadas (email, username, senha)
-- ✅ Serializers REST completos
-- ✅ Camada de serviços
+### Rentals (`/api/rentals/`)
+-  Create/manage car rentals
+-  Vehicle availability verification
+-  Automatic price calculation
+-  Date and period validation
+-  Rental status (pending, confirmed, active, completed, cancelled, delayed)
+-  Additional services (insurance, GPS, child seat, etc)
 
-### Aluguéis (`/api/rentals/`)
-- ✅ Criar/gerenciar aluguéis de carros
-- ✅ Verificação de disponibilidade de veículos
-- ✅ Cálculo automático de preços
-- ✅ Validação de datas e períodos
-- ✅ Status de aluguel (pending, confirmed, active, completed, cancelled, delayed)
-- ✅ Serviços adicionais (seguro, GPS, cadeira infantil, etc)
-
-##  Instalação
+## Installation
 
 ### Windows PowerShell
 
 ```powershell
-# 1. Criar ambiente virtual
+# 1. Create virtual environment
 python -m venv venv
 venv\Scripts\Activate.ps1
 
-# 2. Instalar dependências
+# 2. Install dependencies
 pip install -r requirements.txt
 
-# 3. Configurar variáveis de ambiente (criar arquivo .env)
-# SECRET_KEY=sua-chave-secreta-aqui
+# 3. Configure environment variables (create .env file)
+# SECRET_KEY=your-secret-key-here
 # DEBUG=True
 
-# 4. Executar migrações
+# 4. Run migrations
 python manage.py makemigrations
 python manage.py migrate
 
-# 5. Criar superusuário
+# 5. Create superuser
 python manage.py createsuperuser
 
-# 6. Executar servidor
+# 6. Run development server
 python manage.py runserver 127.0.0.1:8000
 
-# Após iniciar, acesse: http://127.0.0.1:8000/api/
+# After starting, access: http://127.0.0.1:8000/api/
 ```
 
-## Comandos Úteis
+## API Documentation (Swagger/OpenAPI)
+
+After starting the server, access the interactive documentation:
+
+ URL | Description 
+| **http://127.0.0.1:8000/api/docs/** |  **Swagger UI** - Interactive interface to test endpoints |
+| **http://127.0.0.1:8000/api/redoc/** | **ReDoc** - Formatted and easy-to-read documentation |
+| **http://127.0.0.1:8000/api/schema/** | **OpenAPI Schema** - API JSON schema (machine-readable) |
+
+**Tips:**
+- In Swagger UI, you can authenticate with JWT token and test all endpoints
+- Documentation is auto-generated from code (Django REST Framework + drf-spectacular)
+- All models, validations and types are documented
+
+## Useful Commands
 
 ```bash
-# Limpar tokens expirados
+# Clean up expired tokens
 python manage.py cleanup_tokens
 
-# Limpar tokens expirados (dry run)
+# Clean up expired tokens (dry run)
 python manage.py cleanup_tokens --dry-run
 
-# Executar testes
+# Run tests
 python manage.py test
 
-# Executar testes de um app específico
+# Run tests for a specific app
 python manage.py test auth
 
-# Criar migrações
+# Create migrations
 python manage.py makemigrations
 
-# Aplicar migrações
+# Apply migrations
 python manage.py migrate
 ```
 
-## 🏗️ Arquitetura
+## Monitoring (Prometheus/Grafana)
 
-O projeto segue uma arquitetura em camadas inspirada no Alexandria API:
+This service exposes application metrics for Prometheus at:
 
-1. **Views** - Endpoints da API (REST)
-2. **Serializers** - Validação e serialização de dados
-3. **Services** - Lógica de negócio separada
-4. **Models** - Camada de dados
-5. **Validations** - Validações customizadas
-6. **Types** - Definições de tipos (TypedDict)
-7. **Docs** - Documentação por app
+- Endpoint: `http://127.0.0.1:8000/metrics`
 
-## 🔐 Autenticação
+Quick setup:
 
-### Endpoints Principais
+1. Ensure the server is running and `/metrics` responds.
+2. In Prometheus `prometheus.yml`, add a scrape job:
 
-```bash
-POST /api/auth/register/      # Registrar usuário
-POST /api/auth/login/         # Login
-POST /api/auth/logout/        # Logout
-POST /api/auth/token/refresh/ # Renovar token
-POST /api/auth/password/change/        # Alterar senha
-POST /api/auth/password/reset/         # Solicitar reset
-POST /api/auth/password/reset/confirm/ # Confirmar reset
-GET  /api/auth/history/       # Histórico de logins
+```yaml
+scrape_configs:
+  - job_name: 'rentacar'
+    metrics_path: /metrics
+    static_configs:
+      - targets: ['127.0.0.1:8000']
 ```
 
-### Exemplo de Uso
+3. In Grafana, add a Prometheus data source pointing to your Prometheus (e.g., `http://localhost:9090`).
+4. Create dashboards using metrics like `http_requests_total`, `http_request_duration_seconds`, `rentals_created_total`.
+
+See detailed instructions in `PROMETHEUS_GRAFANA.md`.
+
+## Architecture
+
+The project follows a layered architecture inspired by Alexandria API:
+
+1. **Views** - API endpoints (REST)
+2. **Serializers** - Data validation and serialization
+3. **Services** - Separated business logic
+4. **Models** - Data layer
+5. **Validations** - Custom validations
+6. **Types** - Type definitions (TypedDict)
+7. **Docs** - Documentation per app
+
+## Authentication
+
+### Main Endpoints
 
 ```bash
-# 1. Registrar
+POST /api/auth/register/      # Register user
+POST /api/auth/login/         # Login
+POST /api/auth/logout/        # Logout
+POST /api/auth/token/refresh/ # Refresh token
+POST /api/auth/password/change/        # Change password
+POST /api/auth/password/reset/         # Request reset
+POST /api/auth/password/reset/confirm/ # Confirm reset
+GET  /api/auth/history/       # Login history
+```
+
+### Usage Example
+
+```bash
+# 1. Register
 curl -X POST http://localhost:8000/api/auth/register/ \
   -H "Content-Type: application/json" \
   -d '{
-    "username": "joao",
-    "email": "joao@example.com",
-    "password": "SenhaSegura123",
-    "confirm_password": "SenhaSegura123"
+    "username": "john",
+    "email": "john@example.com",
+    "password": "SecurePassword123",
+    "confirm_password": "SecurePassword123"
   }'
 
 # 2. Login
 curl -X POST http://localhost:8000/api/auth/login/ \
   -H "Content-Type: application/json" \
   -d '{
-    "username": "joao",
-    "password": "SenhaSegura123"
+    "username": "john",
+    "password": "SecurePassword123"
   }'
 
-# Resposta:
+# Response:
 # {
 #   "token": "abc123...",
 #   "refresh_token": "xyz789...",
 #   "expires_at": "2025-12-10T10:00:00Z"
 # }
 
-# 3. Usar token nas requisições
+# 3. Use token in requests
 curl -X GET http://localhost:8000/api/auth/history/ \
   -H "Authorization: Bearer abc123..."
 ```
 
-## Testes
+## Tests
 
-O projeto possui testes completos para todos os módulos:
+The project has **55 tests** with 100% coverage of main modules:
+
+### Run Tests
 
 ```bash
-# Executar todos os testes
+# Run ALL tests
 python manage.py test
 
-# Executar testes do auth
-python manage.py test auth
+# Run tests for a specific app
+python manage.py test authentication   # Authentication tests
+python manage.py test accounts        # Accounts tests
+python manage.py test cars            # Cars tests
+python manage.py test rentals         # Rentals tests
 
-# Executar com verbosidade
+# Run with verbosity (shows each test)
 python manage.py test --verbosity=2
+
+# Run a specific test
+python manage.py test authentication.tests.AuthenticationTests.test_user_registration
+
+# Run tests with coverage
+pip install coverage
+coverage run --source='.' manage.py test
+coverage report
+coverage html  # Generates HTML report in htmlcov/
 ```
 
-## Status do Projeto ✅
+### Test Coverage
 
-- ✅ Arquitetura completa (Alexandria API pattern)
-- ✅ Autenticação com tokens customizados
-- ✅ 4 Apps funcionais (authentication, accounts, cars, rentals)
-- ✅ 9 modelos de banco de dados
-- ✅ Service layer com lógica de negócio
-- ✅ 55 testes passando (100% sucesso)
-- ✅ Admin customizado
-- ✅ Documentação completa
+- **Authentication (12 tests)**: Login, logout, tokens, refresh, history
+- **Cars (12 tests)**: CRUD operations, brands, models, documents
+- **Rentals (16 tests)**: Creation, cancellation, price calculation, availability
+- **Services (16 tests)**: Business logic, validations, calculations
+- **Models**: Referential integrity validations
 
-## Próximos Passos (Opcional)
+### Expected Result
 
-- [ ] Frontend em React/Vue
-- [ ] Integração de pagamento (Stripe/PayPal)
-- [ ] Notificações por email
+```
+Found 55 test(s).
+...................................................................
+Ran 55 tests in ~25s
+OK ✅
+```
+
+## Project Status 
+
+-  Complete architecture 
+-  Authentication with custom tokens
+-  4 functional apps (authentication, accounts, cars, rentals)
+-  9 database models
+-  Service layer with business logic
+-  55 tests passing (100% success)
+-  Custom admin interface
+-  Complete documentation
+
+## Usage Examples
+
+### 1. Register and Login
+
+```bash
+# Register new user
+curl -X POST http://localhost:8000/api/auth/register/ \
+  -H "Content-Type: application/json" \
+  -d '{
+    "username": "maria",
+    "email": "maria@example.com",
+    "password": "SecurePassword123!",
+    "confirm_password": "SecurePassword123!",
+    "first_name": "Maria",
+    "last_name": "Silva"
+  }'
+
+# Login
+curl -X POST http://localhost:8000/api/auth/login/ \
+  -H "Content-Type: application/json" \
+  -d '{
+    "username": "maria",
+    "password": "SecurePassword123!"
+  }'
+
+# Response:
+# {
+#   "token": "abc123xyz789...",
+#   "refresh_token": "xyz789abc123...",
+#   "expires_at": "2025-12-12T10:00:00Z",
+#   "user": {...}
+# }
+```
+
+### 2. List Cars
+
+```bash
+# With authentication
+curl -X GET http://localhost:8000/api/cars/ \
+  -H "Authorization: Bearer abc123xyz789..."
+
+# Without authentication (public list)
+curl -X GET http://localhost:8000/api/cars/
+```
+
+### 3. Create Rental
+
+```bash
+curl -X POST http://localhost:8000/api/rentals/ \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer abc123xyz789..." \
+  -d '{
+    "car": 1,
+    "start_date": "2025-12-15",
+    "end_date": "2025-12-20",
+    "driver_license": "12345678900",
+    "with_insurance": true,
+    "additional_services": [
+      {"service": "gps", "quantity": 1},
+      {"service": "child_seat", "quantity": 1}
+    ]
+  }'
+```
+
+### 4. Refresh Token
+
+```bash
+curl -X POST http://localhost:8000/api/auth/token/refresh/ \
+  -H "Content-Type: application/json" \
+  -d '{
+    "refresh_token": "xyz789abc123..."
+  }'
+```
+
+## Next Steps (Optional)
+
+- [ ] Frontend in React/Vue
+- [ ] Payment integration (Stripe/PayPal)
+- [ ] Email notifications
 - [ ] SMS alerts
-- [ ] Dashboard analítico
+- [ ] Analytics dashboard
 - [ ] Mobile app (React Native)
 
-## API Endpoints Disponíveis
+## 🔌 Complete API Endpoints
+
+### Interactive Documentation
 
 ```
-GET  /admin/                  - Admin do Django
-POST /api/auth/register/      - Registrar usuário
-POST /api/auth/login/         - Login
-POST /api/auth/logout/        - Logout  
-GET  /api/accounts/           - Listar contas
-GET  /api/cars/               - Listar carros
-POST /api/cars/               - Criar carro
-GET  /api/rentals/            - Listar aluguéis
-POST /api/rentals/            - Criar aluguel
+GET  /api/schema/             - OpenAPI Schema (JSON)
+GET  /api/docs/               - Swagger UI (interactive)
+GET  /api/redoc/              - ReDoc (documentation)
+```
+
+### Authentication (`/api/auth/`)
+
+```
+POST /api/auth/register/              - Register new user
+POST /api/auth/login/                 - Login
+POST /api/auth/logout/                - Logout
+POST /api/auth/token/refresh/         - Refresh access token
+POST /api/auth/password/change/       - Change password
+POST /api/auth/password/reset/        - Request password reset
+POST /api/auth/password/reset/confirm/- Confirm reset with token
+GET  /api/auth/history/               - List login history
+GET  /api/auth/token/verify/          - Verify token
+```
+
+### Accounts (`/api/accounts/`)
+
+```
+GET  /api/accounts/                   - List all accounts (admin)
+POST /api/accounts/                   - Create new account
+GET  /api/accounts/{id}/              - Account details
+PUT  /api/accounts/{id}/              - Update account (full)
+PATCH /api/accounts/{id}/             - Update account (partial)
+DELETE /api/accounts/{id}/            - Delete account
+```
+
+### Cars (`/api/cars/`)
+
+```
+GET  /api/cars/                       - List all cars
+POST /api/cars/                       - Create new car (admin)
+GET  /api/cars/{id}/                  - Car details
+PUT  /api/cars/{id}/                  - Update car (admin)
+PATCH /api/cars/{id}/                 - Update car partial (admin)
+DELETE /api/cars/{id}/                - Delete car (admin)
+GET  /api/cars/{id}/availability/    - Check availability
+```
+
+### Rentals (`/api/rentals/`)
+
+```
+GET  /api/rentals/                    - List rentals (own or all if admin)
+POST /api/rentals/                    - Create new rental
+GET  /api/rentals/{id}/               - Rental details
+PUT  /api/rentals/{id}/               - Update rental
+PATCH /api/rentals/{id}/              - Update rental (partial)
+DELETE /api/rentals/{id}/             - Cancel rental
+GET  /api/rentals/{id}/summary/       - Rental summary
+POST /api/rentals/{id}/complete/      - Mark rental as complete
+POST /api/rentals/{id}/cancel/        - Cancel with refund
+```
+
+### Admin
+
+```
+GET  /admin/                          - Django Admin
+```
+
+### Expected Status Codes
+
+```
+200 OK              - Success
+201 Created         - Resource created
+204 No Content      - Success without content
+400 Bad Request     - Validation error
+401 Unauthorized    - Not authenticated
+403 Forbidden       - No permission
+404 Not Found       - Resource not found
+500 Server Error    - Server error
 ```
